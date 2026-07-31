@@ -1,0 +1,19 @@
+services:
+  parliamentary-nlp-mcp:
+    build: .
+    image: parliamentary-nlp-mcp:latest
+    container_name: parliamentary-nlp-mcp
+    # Required for MCP over stdio (host / IDE must keep stdin open)
+    stdin_open: true
+    tty: true
+    environment:
+      PARLIAMENTARY_NLP_MODEL_ID: ${PARLIAMENTARY_NLP_MODEL_ID:-alissonf216/parliamentary-bertimbau-auditor}
+      HF_HOME: /cache/huggingface
+      TRANSFORMERS_CACHE: /cache/huggingface
+      # Optional: export HF_TOKEN in a local .env if the checkpoint is private
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - hf-cache:/cache/huggingface
+
+volumes:
+  hf-cache:

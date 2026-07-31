@@ -30,3 +30,6 @@ env/
 .env
 .env.*
 *.pem
+
+# Docker (local overrides only; keep docker-compose.yml tracked)
+docker-compose.override.yml

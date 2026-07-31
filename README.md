@@ -1,21 +1,33 @@
 # Parliamentary NLP MCP Auditor
 
-**Model Context Protocol (MCP) server** for safety-auditing Portuguese parliamentary and political discourse. Designed for institutional speech moderation in a **low-resource NLP** setting (Brazilian Portuguese), wrapping a BERTimbau-family classifier with explicit **uncertainty quantification** and a stable tool contract for LLM clients (Cursor, Claude Desktop, MCP Inspector).
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![MCP Protocol](https://img.shields.io/badge/MCP-stdio-555555.svg)](https://modelcontextprotocol.io/)
+[![Transformers](https://img.shields.io/badge/🤗%20Transformers-BERTimbau-yellow.svg)](https://huggingface.co/docs/transformers)
+[![Hugging Face](https://img.shields.io/badge/model-parliamentary--bertimbau--auditor-orange.svg)](https://huggingface.co/alissonf216/parliamentary-bertimbau-auditor)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-compose-2496ED.svg)](docker-compose.yml)
+
+A **Model Context Protocol (MCP)** server providing structured tools for auditing hate speech and offensive language in formal Brazilian parliamentary speeches.
+
+Built for institutional speech moderation in a **low-resource NLP** setting (Brazilian Portuguese): a BERTimbau-family classifier with explicit **uncertainty quantification** and a stable tool contract for LLM clients (Cursor, Claude Desktop, MCP Inspector).
 
 ---
 
 ## Table of Contents
 
 1. [Summary](#summary)
-2. [Key Features](#key-features)
-3. [Installation Tutorial](#installation-tutorial)
-4. [Usage Tutorial](#usage-tutorial)
-5. [Connect to Cursor / Claude Desktop](#connect-to-cursor--claude-desktop)
-6. [Sample Output](#sample-output)
-7. [Project Layout](#project-layout)
-8. [Inference Pipeline](#inference-pipeline)
-9. [Troubleshooting](#troubleshooting)
-10. [License](#license)
+2. [Architecture](#architecture)
+3. [Demo](#demo)
+4. [Key Features](#key-features)
+5. [Quickstart via Docker](#quickstart-via-docker)
+6. [Installation Tutorial](#installation-tutorial)
+7. [Usage Tutorial](#usage-tutorial)
+8. [Connect to Cursor / Claude Desktop](#connect-to-cursor--claude-desktop)
+9. [Sample Output](#sample-output)
+10. [Project Layout](#project-layout)
+11. [Inference Pipeline](#inference-pipeline)
+12. [Troubleshooting](#troubleshooting)
+13. [License](#license)
 
 ---
 
@@ -58,6 +70,52 @@ Canonical labels: `NEUTRAL`, `GENERIC_OFFENSE`, `TARGETED_OFFENSE`, `EXPLICIT_HA
 
 ---
 
+## Architecture
+
+The server is a thin MCP façade over a fine-tuned transformer. Agents talk MCP over **stdio**; weights load lazily from Hugging Face on the first tool call.
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    Claude[Claude Desktop]
+    Cursor[Cursor / IDE agent]
+    Inspector[MCP Inspector]
+  end
+
+  subgraph "This repository"
+    MCP["MCP Server<br/>audit_parliamentary_speech"]
+    Engine["Inference engine<br/>tokenize → softmax → Shannon entropy"]
+  end
+
+  HF["Hugging Face<br/>parliamentary-bertimbau-auditor"]
+
+  Claude -->|MCP stdio| MCP
+  Cursor -->|MCP stdio| MCP
+  Inspector -->|MCP stdio| MCP
+  MCP --> Engine
+  Engine -->|lazy download / cache| HF
+```
+
+---
+
+## Demo
+
+Screen capture of the tool classifying a parliamentary utterance via an MCP client
+(Claude Desktop, Cursor, or MCP Inspector):
+
+<!-- After recording, save as docs/demo/mcp-audit-demo.gif and uncomment:
+![MCP auditor demo](docs/demo/mcp-audit-demo.gif)
+-->
+
+> **Add your demo:** record a short GIF/video of `audit_parliamentary_speech` returning
+> `classification`, `confidence`, and `requires_human_review`, then place it at
+> [`docs/demo/mcp-audit-demo.gif`](docs/demo/) (see [`docs/demo/README.md`](docs/demo/README.md)).
+
+Until a recording is available, use the [Sample Output](#sample-output) JSON and the
+[MCP Inspector walkthrough](#option-c--interactive-demo-with-mcp-inspector) below.
+
+---
+
 ## Key Features
 
 | Feature | Detail |
@@ -68,6 +126,62 @@ Canonical labels: `NEUTRAL`, `GENERIC_OFFENSE`, `TARGETED_OFFENSE`, `EXPLICIT_HA
 | **Uncertainty quantification** | Softmax probabilities + Shannon entropy \(H(X)=-\sum P(x)\log P(x)\); `requires_human_review=true` when entropy \(> 0.60\) |
 | **Lazy singleton load** | Model weights download on first tool call, not at import time |
 | **Documented evaluation** | Stratified CV, imbalance strategies, Flat / binary / cascade — [MODELING.md](docs/MODELING.md) + [notebooks/](notebooks/) + [figures](docs/figures/) |
+| **Docker image** | Reproducible runtime via `Dockerfile` + `docker compose` (HF cache volume) |
+
+---
+
+## Quickstart via Docker
+
+Requires [Docker](https://docs.docker.com/get-docker/) with Compose v2.
+
+### 1 — Build and start the MCP server
+
+```bash
+git clone https://github.com/alissonf216/parliamentary-nlp-mcp.git
+cd parliamentary-nlp-mcp
+docker compose up --build
+```
+
+The container entrypoint is `parliamentary-nlp-mcp` (MCP over **stdio**). It will look idle in the terminal until a client attaches — that is expected. Model weights download on the first tool call and persist in the `hf-cache` volume.
+
+Optional overrides (create a local `.env` or export before `compose up`):
+
+```bash
+export PARLIAMENTARY_NLP_MODEL_ID=alissonf216/parliamentary-bertimbau-auditor
+# export HF_TOKEN=hf_...   # only if the checkpoint is private
+docker compose up --build
+```
+
+### 2 — Point an MCP client at the container
+
+**One-shot interactive run** (recommended for Claude Desktop / Cursor):
+
+```json
+{
+  "mcpServers": {
+    "parliamentary-nlp": {
+      "command": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "/absolute/path/to/parliamentary-nlp-mcp/docker-compose.yml",
+        "run",
+        "--rm",
+        "-i",
+        "parliamentary-nlp-mcp"
+      ]
+    }
+  }
+}
+```
+
+**Or** a direct image run after `docker compose build`:
+
+```bash
+docker compose run --rm -i parliamentary-nlp-mcp
+```
+
+> Prefer a local venv instead? Skip to [Installation Tutorial](#installation-tutorial).
 
 ---
 
@@ -319,6 +433,7 @@ Restart Claude Desktop and confirm the hammer / tools icon lists `audit_parliame
 parliamentary-nlp-mcp/
 ├── docs/
 │   ├── MODELING.md      # Modeling & evaluation (with figures)
+│   ├── demo/            # GIF / screen capture of MCP in action
 │   ├── figures/         # Heatmaps, CMs, ROC/PR, bars
 │   └── results/         # CSV + JSON experiment tables
 ├── notebooks/
@@ -333,6 +448,8 @@ parliamentary-nlp-mcp/
 │   └── server.py        # MCP tool surface
 ├── tests/
 │   └── test_model.py
+├── Dockerfile
+├── docker-compose.yml
 ├── pyproject.toml
 ├── .gitignore
 └── README.md
@@ -360,6 +477,8 @@ For corpus design, label definitions, training protocol, metrics, and quantitati
 | First Inspector call hangs | Normal — model download. Check network / Hugging Face access |
 | Cursor does not see the tool | Use absolute `command` path; restart MCP; confirm venv has the package installed |
 | Want CPU-only torch | Install a CPU wheel from [pytorch.org](https://pytorch.org) **before** `pip install -e ".[dev]"` if needed |
+| Docker build is slow / large | First build pulls PyTorch; later builds use the layer cache. HF weights live in the `hf-cache` volume |
+| Claude/Cursor + Docker: no tools | Use `docker compose run --rm -i …` (stdin must stay open); prefer absolute path to `docker-compose.yml` |
 
 ---
 
