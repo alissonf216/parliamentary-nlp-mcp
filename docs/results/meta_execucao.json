@@ -1,0 +1,12 @@
+{
+  "tempo_total_segundos": 66744.25951259099,
+  "tempo_total_minutos": 1112.4043252098497,
+  "modelos": [
+    "mBERT",
+    "RoBERTa",
+    "BERTimbau"
+  ],
+  "n_splits": 5,
+  "epochs": 12,
+  "device": "cuda"
+}
