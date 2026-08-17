@@ -9,7 +9,7 @@
 
 A **Model Context Protocol (MCP)** server providing structured tools for auditing hate speech and offensive language in formal Brazilian parliamentary speeches.
 
-Built for institutional speech moderation in a **low-resource NLP** setting (Brazilian Portuguese): a BERTimbau-family classifier with explicit **uncertainty quantification** and a stable tool contract for LLM clients (Cursor, Claude Desktop, MCP Inspector).
+Built for institutional speech moderation in a **low-resource NLP** setting (Brazilian Portuguese): a BERTimbau-family classifier with explicit **uncertainty quantification** and a stable tool contract for LLM clients (Cursor, Claude Desktop, MCP Inspector)
 
 ---
 
