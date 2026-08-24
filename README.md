@@ -59,6 +59,11 @@ Reproducible experiments (notebook + pipeline) and raw tables:
 | --- | --- | --- |
 | **Default** | [`alissonf216/parliamentary-bertimbau-auditor`](https://huggingface.co/alissonf216/parliamentary-bertimbau-auditor) | Fine-tuned parliamentary BERTimbau (4-class taxonomy) — see [docs/MODELING.md](docs/MODELING.md) |
 
+---
+---
+---
+
+
 Override without code changes:
 
 ```bash
